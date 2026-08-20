@@ -16,31 +16,42 @@
   input[type=range] { width:100%; }
   .value { font-variant-numeric: tabular-nums; text-align:right; font-size:13px; opacity:.9; }
   button, .filelabel { appearance:none; border:1px solid #444; border-radius:12px; background:#2a2a2a; color:#fff; padding:11px 14px; font-weight:600; cursor:pointer; }
+  button.primary { background:#fff; color:#111; }
+  button.modeActive { background:#fff; color:#111; border-color:#fff; }
   select { width:100%; appearance:auto; border:1px solid #444; border-radius:12px; background:#242424; color:#fff; padding:11px 12px; font-size:16px; }
   .micgrid { display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:end; margin-top:12px; }
   .fieldlabel { display:block; font-size:13px; opacity:.8; margin-bottom:6px; }
   .activeMic { margin-top:10px; font-size:13px; line-height:1.5; }
-  @media (max-width:560px){ .micgrid{grid-template-columns:1fr;} }
-  button.primary { background:#fff; color:#111; }
-  button.active { background:#3b3b3b; }
+  @media (max-width:560px){ .micgrid{grid-template-columns:1fr;} .row{grid-template-columns:1fr 84px;} .row label{grid-column:1/-1;} }
   .controls { display:flex; flex-wrap:wrap; gap:10px; }
+  .modeControls { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
   .status { margin-top:12px; font-size:13px; opacity:.82; min-height:20px; }
   .small { font-size:12px; opacity:.68; line-height:1.5; }
   canvas { width:100%; height:160px; background:#0b0b0b; border-radius:12px; display:block; }
-  .toggle { display:flex; align-items:center; gap:8px; }
   input[type=file] { display:none; }
   .preset { font-size:13px; line-height:1.7; }
   .warn { background:#231f14; border-color:#5a4b1d; }
+  .focusBox { background:#171d20; border-color:#34444c; }
+  .badge { display:inline-block; border:1px solid #555; border-radius:999px; padding:3px 8px; font-size:12px; margin-bottom:8px; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>CHONTO Bullet Crack EQ</h1>
-  <div class="sub">Bullet R1の機械音を抑え、1ハゼの「パチッ」を聞き取りやすくするための簡易リアルタイムEQ。</div>
+  <div class="sub">Bullet R1の機械音を抑え、1ハゼの「パチッ」をリアルタイムで聞き取りやすくするモニター用EQ。</div>
 
   <div class="card warn">
     <b>重要</b>
-    <div class="small">マイクを使うときはイヤホン/ヘッドホン推奨です。iPhone本体スピーカーでモニターするとハウリングする可能性があります。解析用の生音は加工せず、これは「聴くためのフィルター」として使ってください。</div>
+    <div class="small">イヤホン/ヘッドホン推奨です。解析用の生音は加工せず、このEQは「耳で1ハゼを探す」ためだけに使ってください。1ハゼ集中モードは意図的に音が細く・金属的になります。</div>
+  </div>
+
+  <div class="card focusBox">
+    <div class="badge" id="modeBadge">1ハゼ集中モード</div>
+    <div class="modeControls">
+      <button id="standardPresetBtn">標準EQ</button>
+      <button id="focusPresetBtn" class="modeActive">⚡ 1ハゼ集中</button>
+    </div>
+    <div id="modeDesc" class="small" style="margin-top:10px">5 kHz以下を急峻に落とし、今回のブラジル700gで1ハゼ時に差が大きかった9〜16 kHzを強調します。機械音を減らすことを最優先した設定です。</div>
   </div>
 
   <div class="card">
@@ -49,20 +60,18 @@
       <button id="stopBtn">■ 停止</button>
       <label class="filelabel">🎵 音声ファイルを試す<input id="fileInput" type="file" accept="audio/*"></label>
       <button id="bypassBtn">EQ BYPASS</button>
-      <button id="resetBtn">初期設定に戻す</button>
+      <button id="resetBtn">現在のモードを初期値へ</button>
     </div>
     <div class="micgrid">
       <div>
         <label class="fieldlabel" for="micSelect">入力マイク</label>
-        <select id="micSelect">
-          <option value="">自動選択（最初にマイク許可が必要）</option>
-        </select>
+        <select id="micSelect"><option value="">自動選択（最初にマイク許可が必要）</option></select>
       </div>
       <button id="refreshMicBtn">マイク一覧を更新</button>
     </div>
     <div id="activeMic" class="activeMic">使用中のマイク：未開始</div>
     <div id="status" class="status">待機中</div>
-    <div class="small">※ Safari/iOSが本体マイクを選択可能として公開している場合に選べます。AirPodsなど接続時は、iOSの音声ルーティングにより選択が反映されない場合があります。その場合は「使用中のマイク」の表示で確認できます。</div>
+    <div class="small">※ Safari/iOSが本体マイクを公開している場合に選べます。AirPods接続時などはiOS側の音声ルーティングが優先される場合があります。</div>
   </div>
 
   <div class="card">
@@ -71,24 +80,25 @@
   </div>
 
   <div class="card">
-    <h2 style="font-size:17px;margin-top:0">Bullet 700g テストプリセット</h2>
-    <div class="preset">
-      High-pass 450 Hz / Notch 890, 1220, 1900, 2440, 3340, 4830 Hz / High-shelf 8 kHz +5 dB
-    </div>
+    <h2 style="font-size:17px;margin-top:0">フィルター設定</h2>
+    <div id="presetSummary" class="preset"></div>
 
-    <div class="row"><label>High-pass</label><input id="hpFreq" type="range" min="80" max="1200" step="10" value="450"><div class="value" id="hpFreqV"></div></div>
-
+    <div class="row"><label>High-pass（2段）</label><input id="hpFreq" type="range" min="80" max="7000" step="50" value="5000"><div class="value" id="hpFreqV"></div></div>
     <div id="notchRows"></div>
 
-    <div class="row"><label>High-shelf 周波数</label><input id="hsFreq" type="range" min="4000" max="12000" step="100" value="8000"><div class="value" id="hsFreqV"></div></div>
-    <div class="row"><label>High-shelf Gain</label><input id="hsGain" type="range" min="0" max="12" step="0.5" value="5"><div class="value" id="hsGainV"></div></div>
-    <div class="row"><label>Monitor Gain</label><input id="outGain" type="range" min="-24" max="6" step="0.5" value="-6"><div class="value" id="outGainV"></div></div>
+    <div class="row"><label>High-shelf 周波数</label><input id="hsFreq" type="range" min="4000" max="14000" step="100" value="9000"><div class="value" id="hsFreqV"></div></div>
+    <div class="row"><label>High-shelf Gain</label><input id="hsGain" type="range" min="-6" max="12" step="0.5" value="3"><div class="value" id="hsGainV"></div></div>
+
+    <div class="row"><label>Crack Boost 周波数</label><input id="boostFreq" type="range" min="6000" max="16000" step="100" value="11000"><div class="value" id="boostFreqV"></div></div>
+    <div class="row"><label>Crack Boost Gain</label><input id="boostGain" type="range" min="0" max="15" step="0.5" value="8"><div class="value" id="boostGainV"></div></div>
+    <div class="row"><label>Crack Boost Q</label><input id="boostQ" type="range" min="0.3" max="4" step="0.1" value="0.9"><div class="value" id="boostQV"></div></div>
+
+    <div class="row"><label>Low-pass</label><input id="lpFreq" type="range" min="10000" max="22000" step="100" value="17000"><div class="value" id="lpFreqV"></div></div>
+    <div class="row"><label>Monitor Gain</label><input id="outGain" type="range" min="-30" max="6" step="0.5" value="-12"><div class="value" id="outGainV"></div></div>
   </div>
 
   <div class="card">
-    <div class="small">
-      初期値は今回のブラジル700g録音から得た「試験用」設定です。焙煎量、F値、設置位置、マイク特性で最適値は変わります。ノッチは狭め（高Q）にして、機械音の細いピークだけを削る設計です。
-    </div>
+    <div class="small">「1ハゼ集中」は今回のブラジル700g録音を基準にした実験プリセットです。特に9:27付近の明瞭な瞬間音では、背景に対して9〜16 kHzの増加が大きかったため、その帯域を優先しています。豆・投入量・F値・マイク位置で最適値は変わります。</div>
   </div>
 </div>
 
@@ -98,26 +108,38 @@ let inputGain, outputGain, analyser;
 let chain = [];
 let bypass = false;
 let rafId;
+let currentMode = 'focus';
 
-const preset = {
-  hp: 450,
-  notches: [
-    {f:890,  g:-8, q:11},
-    {f:1220, g:-5, q:10},
-    {f:1900, g:-6, q:8},
-    {f:2440, g:-4, q:10},
-    {f:3340, g:-7, q:10},
-    {f:4830, g:-5, q:10},
-  ],
-  hsFreq: 8000,
-  hsGain: 5,
-  outDb: -6,
+const presets = {
+  standard: {
+    hp: 450,
+    notches: [
+      {f:890,  g:-8, q:11}, {f:1220, g:-5, q:10}, {f:1900, g:-6, q:8},
+      {f:2440, g:-4, q:10}, {f:3340, g:-7, q:10}, {f:4830, g:-5, q:10}
+    ],
+    hsFreq: 8000, hsGain: 5,
+    boostFreq: 10500, boostGain: 0, boostQ: 0.9,
+    lpFreq: 20000, outDb: -6,
+    summary: 'High-pass 450 Hz / 機械音ノッチ 890〜4830 Hz / High-shelf 8 kHz +5 dB',
+    desc: '元の音の雰囲気をある程度残しながら、Bulletの代表的な機械音を抑える設定です。'
+  },
+  focus: {
+    hp: 5000,
+    notches: [
+      {f:5517, g:-9, q:14}, {f:5842, g:-7, q:14}, {f:6577, g:-7, q:13},
+      {f:6829, g:-6, q:13}, {f:7544, g:-6, q:12}, {f:8317, g:-5, q:12}
+    ],
+    hsFreq: 9000, hsGain: 3,
+    boostFreq: 11000, boostGain: 8, boostQ: 0.9,
+    lpFreq: 17000, outDb: -12,
+    summary: 'High-pass 5.0 kHz ×2段 / 高域の機械音ノッチ / 11 kHz +8 dB / Low-pass 17 kHz',
+    desc: '5 kHz以下を急峻に落とし、今回のブラジル700gで1ハゼ時に差が大きかった9〜16 kHzを強調します。機械音を減らすことを最優先した設定です。'
+  }
 };
 
 const $ = id => document.getElementById(id);
 const status = msg => $('status').textContent = msg;
-
-function dbToGain(db){ return Math.pow(10, db/20); }
+const dbToGain = db => Math.pow(10, db/20);
 
 function ensureAudio(){
   if (!ctx) {
@@ -126,7 +148,7 @@ function ensureAudio(){
     outputGain = ctx.createGain();
     analyser = ctx.createAnalyser();
     analyser.fftSize = 4096;
-    analyser.smoothingTimeConstant = 0.7;
+    analyser.smoothingTimeConstant = 0.65;
     buildChain();
     drawSpectrum();
   }
@@ -134,10 +156,7 @@ function ensureAudio(){
 
 function makeBiquad(type, freq, gain=0, q=1){
   const f = ctx.createBiquadFilter();
-  f.type = type;
-  f.frequency.value = freq;
-  f.Q.value = q;
-  f.gain.value = gain;
+  f.type = type; f.frequency.value = freq; f.Q.value = q; f.gain.value = gain;
   return f;
 }
 
@@ -145,27 +164,25 @@ function buildChain(){
   chain.forEach(n => { try { n.disconnect(); } catch(e){} });
   chain = [];
 
-  const hp = makeBiquad('highpass', +$('hpFreq').value, 0, 0.707);
-  chain.push(hp);
+  // 2段High-pass: 1ハゼ集中では低〜中域の機械音を強く落とす
+  const hp1 = makeBiquad('highpass', +$('hpFreq').value, 0, 0.707);
+  const hp2 = makeBiquad('highpass', +$('hpFreq').value, 0, 0.707);
+  chain.push(hp1, hp2);
 
-  preset.notches.forEach((n,i) => {
-    const freq = +$('nF'+i).value;
-    const gain = +$('nG'+i).value;
-    const q = +$('nQ'+i).value;
-    const peq = makeBiquad('peaking', freq, gain, q);
-    chain.push(peq);
-  });
+  for(let i=0;i<6;i++){
+    chain.push(makeBiquad('peaking', +$('nF'+i).value, +$('nG'+i).value, +$('nQ'+i).value));
+  }
 
-  const hs = makeBiquad('highshelf', +$('hsFreq').value, +$('hsGain').value, 0.707);
-  chain.push(hs);
+  chain.push(makeBiquad('highshelf', +$('hsFreq').value, +$('hsGain').value, 0.707));
+  chain.push(makeBiquad('peaking', +$('boostFreq').value, +$('boostGain').value, +$('boostQ').value));
+  chain.push(makeBiquad('lowpass', +$('lpFreq').value, 0, 0.707));
 
   try { inputGain.disconnect(); } catch(e){}
   try { outputGain.disconnect(); } catch(e){}
   try { analyser.disconnect(); } catch(e){}
 
-  if (bypass) {
-    inputGain.connect(outputGain);
-  } else {
+  if (bypass) inputGain.connect(outputGain);
+  else {
     let prev = inputGain;
     chain.forEach(n => { prev.connect(n); prev = n; });
     prev.connect(outputGain);
@@ -189,73 +206,38 @@ function isLikelyBuiltin(label){
 }
 
 async function refreshMicList({requestPermission=false, preferBuiltin=false}={}){
-  if (!navigator.mediaDevices?.enumerateDevices) {
-    status('このブラウザではマイク一覧を取得できません');
-    return;
-  }
+  if (!navigator.mediaDevices?.enumerateDevices) { status('このブラウザではマイク一覧を取得できません'); return; }
   let temp=null;
   try {
-    if (requestPermission) {
-      temp = await navigator.mediaDevices.getUserMedia({audio:true});
-    }
+    if (requestPermission) temp = await navigator.mediaDevices.getUserMedia({audio:true});
     const devices=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audioinput');
-    const sel=$('micSelect');
-    const previous=sel.value;
+    const sel=$('micSelect'); const previous=sel.value;
     sel.innerHTML='<option value="">自動選択</option>';
-    devices.forEach((d,i)=>{
-      const opt=document.createElement('option');
-      opt.value=d.deviceId;
-      opt.textContent=d.label || `マイク ${i+1}`;
-      sel.appendChild(opt);
-    });
-
-    if (previous && devices.some(d=>d.deviceId===previous)) {
-      sel.value=previous;
-    } else if (preferBuiltin) {
-      const built=devices.find(d=>isLikelyBuiltin(d.label));
-      if (built) sel.value=built.deviceId;
-    }
+    devices.forEach((d,i)=>{ const opt=document.createElement('option'); opt.value=d.deviceId; opt.textContent=d.label || `マイク ${i+1}`; sel.appendChild(opt); });
+    if (previous && devices.some(d=>d.deviceId===previous)) sel.value=previous;
+    else if (preferBuiltin) { const built=devices.find(d=>isLikelyBuiltin(d.label)); if (built) sel.value=built.deviceId; }
     if (!devices.length) status('マイクが見つかりませんでした');
-  } catch(e) {
-    status('マイク一覧を取得できません: '+e.message);
-  } finally {
-    if(temp) temp.getTracks().forEach(t=>t.stop());
-  }
+  } catch(e) { status('マイク一覧を取得できません: '+e.message); }
+  finally { if(temp) temp.getTracks().forEach(t=>t.stop()); }
 }
 
 async function startMic(){
-  ensureAudio();
-  if (ctx.state === 'suspended') await ctx.resume();
-  stopCurrentSource();
+  ensureAudio(); if (ctx.state === 'suspended') await ctx.resume(); stopCurrentSource();
   try {
-    // 初回は権限取得後にデバイス名が見えるため、一覧を更新する
-    if ($('micSelect').options.length <= 1) {
-      await refreshMicList({requestPermission:true, preferBuiltin:true});
-    }
+    if ($('micSelect').options.length <= 1) await refreshMicList({requestPermission:true, preferBuiltin:true});
     const selected=$('micSelect').value;
-    const constraints={
-      echoCancellation:false,
-      noiseSuppression:false,
-      autoGainControl:false,
-      channelCount:1
-    };
+    const constraints={echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1};
     if(selected) constraints.deviceId={exact:selected};
-
     mediaStream = await navigator.mediaDevices.getUserMedia({audio:constraints});
-    sourceNode = ctx.createMediaStreamSource(mediaStream);
-    reconnectSource();
-
-    const track=mediaStream.getAudioTracks()[0];
-    const label=track?.label || '名称不明';
+    sourceNode = ctx.createMediaStreamSource(mediaStream); reconnectSource();
+    const track=mediaStream.getAudioTracks()[0]; const label=track?.label || '名称不明';
     $('activeMic').textContent='使用中のマイク：'+label;
-    status('マイク入力中：EQモニターON');
-
-    // 実際に選ばれたdeviceIdをセレクトにも反映できる場合は反映
+    status('マイク入力中：'+(currentMode==='focus'?'1ハゼ集中':'標準EQ')+' / EQモニターON');
     const actualId=track?.getSettings?.().deviceId;
     if(actualId && [...$('micSelect').options].some(o=>o.value===actualId)) $('micSelect').value=actualId;
   } catch (e) {
     $('activeMic').textContent='使用中のマイク：開始できませんでした';
-    status('マイクを開始できません: ' + e.message + '（HTTPS / マイク許可 / iOSの音声ルーティングを確認してください）');
+    status('マイクを開始できません: ' + e.message + '（HTTPS / マイク許可 / iOSの音声ルーティングを確認）');
   }
 }
 
@@ -264,123 +246,86 @@ function stopCurrentSource(){
   if (mediaStream) { mediaStream.getTracks().forEach(t=>t.stop()); mediaStream = null; }
   if (audioEl) { audioEl.pause(); audioEl.src=''; audioEl=null; }
 }
-
-function stopAll(){
-  stopCurrentSource();
-  $('activeMic').textContent='使用中のマイク：未開始';
-  status('停止しました');
-}
+function stopAll(){ stopCurrentSource(); $('activeMic').textContent='使用中のマイク：未開始'; status('停止しました'); }
 
 function loadFile(file){
-  ensureAudio();
-  stopCurrentSource();
-  const url = URL.createObjectURL(file);
-  audioEl = new Audio(url);
-  audioEl.loop = true;
-  sourceNode = ctx.createMediaElementSource(audioEl);
-  reconnectSource();
-  ctx.resume().then(()=>audioEl.play());
-  status('音声ファイル再生中（ループ）');
+  ensureAudio(); stopCurrentSource();
+  const url = URL.createObjectURL(file); audioEl = new Audio(url); audioEl.loop = true;
+  sourceNode = ctx.createMediaElementSource(audioEl); reconnectSource();
+  ctx.resume().then(()=>audioEl.play()); status('音声ファイル再生中（ループ）');
 }
 
 function drawSpectrum(){
-  const canvas = $('spectrum');
-  const g = canvas.getContext('2d');
-  const data = new Uint8Array(analyser.frequencyBinCount);
+  const canvas = $('spectrum'); const g = canvas.getContext('2d'); const data = new Uint8Array(analyser.frequencyBinCount);
   function draw(){
-    rafId = requestAnimationFrame(draw);
-    analyser.getByteFrequencyData(data);
-    const w=canvas.width, h=canvas.height;
-    g.clearRect(0,0,w,h);
-    g.fillStyle='#0b0b0b'; g.fillRect(0,0,w,h);
-    g.strokeStyle='#777'; g.lineWidth=1;
-    g.beginPath();
-    // log-frequency drawing 40 Hz .. Nyquist
-    const nyq = ctx.sampleRate/2;
+    rafId = requestAnimationFrame(draw); analyser.getByteFrequencyData(data);
+    const w=canvas.width, h=canvas.height; g.clearRect(0,0,w,h); g.fillStyle='#0b0b0b'; g.fillRect(0,0,w,h);
+    g.strokeStyle='#888'; g.lineWidth=1.2; g.beginPath(); const nyq = ctx.sampleRate/2;
     for(let x=0;x<w;x++){
-      const f = 40 * Math.pow(nyq/40, x/(w-1));
-      const idx = Math.min(data.length-1, Math.floor(f/nyq*data.length));
-      const y = h - (data[idx]/255)*h;
-      if(x===0) g.moveTo(x,y); else g.lineTo(x,y);
+      const f = 40 * Math.pow(nyq/40, x/(w-1)); const idx = Math.min(data.length-1, Math.floor(f/nyq*data.length));
+      const y = h - (data[idx]/255)*h; if(x===0) g.moveTo(x,y); else g.lineTo(x,y);
     }
-    g.stroke();
-
-    g.fillStyle='#aaa'; g.font='18px -apple-system';
-    [100,500,1000,3000,8000,16000].forEach(f=>{
-      if(f<nyq){
-        const x = Math.log(f/40)/Math.log(nyq/40)*w;
-        g.fillText(f>=1000?(f/1000)+'k':f, x+3, h-8);
-      }
-    });
+    g.stroke(); g.fillStyle='#aaa'; g.font='18px -apple-system';
+    [100,500,1000,3000,5000,8000,12000,16000].forEach(f=>{ if(f<nyq){ const x = Math.log(f/40)/Math.log(nyq/40)*w; g.fillText(f>=1000?(f/1000)+'k':f, x+3, h-8); } });
   }
   draw();
 }
 
 function renderNotches(){
-  const host=$('notchRows');
-  host.innerHTML='';
-  preset.notches.forEach((n,i)=>{
+  const host=$('notchRows'); host.innerHTML='';
+  for(let i=0;i<6;i++){
     host.insertAdjacentHTML('beforeend', `
-      <div class="row"><label>Notch ${i+1} 周波数</label><input id="nF${i}" type="range" min="300" max="7000" step="10" value="${n.f}"><div class="value" id="nF${i}V"></div></div>
-      <div class="row"><label>Notch ${i+1} Gain</label><input id="nG${i}" type="range" min="-18" max="0" step="0.5" value="${n.g}"><div class="value" id="nG${i}V"></div></div>
-      <div class="row"><label>Notch ${i+1} Q</label><input id="nQ${i}" type="range" min="2" max="20" step="0.5" value="${n.q}"><div class="value" id="nQ${i}V"></div></div>
-    `);
-  });
+      <div class="row"><label>Notch ${i+1} 周波数</label><input id="nF${i}" type="range" min="300" max="12000" step="10" value="1000"><div class="value" id="nF${i}V"></div></div>
+      <div class="row"><label>Notch ${i+1} Gain</label><input id="nG${i}" type="range" min="-20" max="0" step="0.5" value="-6"><div class="value" id="nG${i}V"></div></div>
+      <div class="row"><label>Notch ${i+1} Q</label><input id="nQ${i}" type="range" min="2" max="24" step="0.5" value="10"><div class="value" id="nQ${i}V"></div></div>`);
+  }
 }
 
-function bind(){
-  const ids = ['hpFreq','hsFreq','hsGain','outGain'];
-  preset.notches.forEach((_,i)=>ids.push('nF'+i,'nG'+i,'nQ'+i));
-  ids.forEach(id=>{
-    const el=$(id);
-    el.addEventListener('input',()=>{ updateLabels(); if(ctx) buildChain(); });
-  });
-  $('micBtn').onclick=startMic;
-  $('refreshMicBtn').onclick=()=>refreshMicList({requestPermission:true, preferBuiltin:true});
-  $('micSelect').addEventListener('change', async ()=>{
-    if(mediaStream){
-      status('入力マイクを切り替えています…');
-      await startMic();
-    }
-  });
-  $('stopBtn').onclick=stopAll;
-  $('fileInput').onchange=e=>{ if(e.target.files[0]) loadFile(e.target.files[0]); };
-  $('bypassBtn').onclick=()=>{
-    bypass=!bypass;
-    $('bypassBtn').textContent = bypass ? 'EQ ONに戻す' : 'EQ BYPASS';
-    if(ctx) buildChain();
-  };
-  $('resetBtn').onclick=()=>{ applyPreset(); if(ctx) buildChain(); };
-}
-
-function applyPreset(){
-  $('hpFreq').value=preset.hp;
-  preset.notches.forEach((n,i)=>{ $('nF'+i).value=n.f; $('nG'+i).value=n.g; $('nQ'+i).value=n.q; });
-  $('hsFreq').value=preset.hsFreq;
-  $('hsGain').value=preset.hsGain;
-  $('outGain').value=preset.outDb;
-  updateLabels();
+function applyPreset(mode=currentMode){
+  currentMode=mode; const p=presets[mode];
+  $('hpFreq').value=p.hp;
+  p.notches.forEach((n,i)=>{ $('nF'+i).value=n.f; $('nG'+i).value=n.g; $('nQ'+i).value=n.q; });
+  $('hsFreq').value=p.hsFreq; $('hsGain').value=p.hsGain;
+  $('boostFreq').value=p.boostFreq; $('boostGain').value=p.boostGain; $('boostQ').value=p.boostQ;
+  $('lpFreq').value=p.lpFreq; $('outGain').value=p.outDb;
+  $('modeBadge').textContent=mode==='focus'?'1ハゼ集中モード':'標準EQ';
+  $('modeDesc').textContent=p.desc; $('presetSummary').textContent=p.summary;
+  $('focusPresetBtn').classList.toggle('modeActive',mode==='focus');
+  $('standardPresetBtn').classList.toggle('modeActive',mode==='standard');
+  updateLabels(); if(ctx) buildChain();
+  status(mode==='focus'?'1ハゼ集中モードに切替':'標準EQに切替');
 }
 
 function updateLabels(){
-  $('hpFreqV').textContent=$('hpFreq').value+' Hz';
-  preset.notches.forEach((_,i)=>{
-    $('nF'+i+'V').textContent=$('nF'+i).value+' Hz';
-    $('nG'+i+'V').textContent=$('nG'+i).value+' dB';
-    $('nQ'+i+'V').textContent='Q '+$('nQ'+i).value;
-  });
+  $('hpFreqV').textContent=(+$('hpFreq').value>=1000?(+$('hpFreq').value/1000).toFixed(2)+' kHz':$('hpFreq').value+' Hz');
+  for(let i=0;i<6;i++){
+    $('nF'+i+'V').textContent=(+$('nF'+i).value>=1000?(+$('nF'+i).value/1000).toFixed(2)+' kHz':$('nF'+i).value+' Hz');
+    $('nG'+i+'V').textContent=$('nG'+i).value+' dB'; $('nQ'+i+'V').textContent='Q '+$('nQ'+i).value;
+  }
   $('hsFreqV').textContent=(+$('hsFreq').value/1000).toFixed(1)+' kHz';
-  $('hsGainV').textContent='+'+$('hsGain').value+' dB';
-  $('outGainV').textContent=$('outGain').value+' dB';
+  $('hsGainV').textContent=(+$('hsGain').value>=0?'+':'')+$('hsGain').value+' dB';
+  $('boostFreqV').textContent=(+$('boostFreq').value/1000).toFixed(1)+' kHz';
+  $('boostGainV').textContent='+'+$('boostGain').value+' dB'; $('boostQV').textContent='Q '+$('boostQ').value;
+  $('lpFreqV').textContent=(+$('lpFreq').value/1000).toFixed(1)+' kHz'; $('outGainV').textContent=$('outGain').value+' dB';
 }
 
-if (navigator.mediaDevices?.addEventListener) {
-  navigator.mediaDevices.addEventListener('devicechange', ()=>refreshMicList());
+function bind(){
+  const ids = ['hpFreq','hsFreq','hsGain','boostFreq','boostGain','boostQ','lpFreq','outGain'];
+  for(let i=0;i<6;i++) ids.push('nF'+i,'nG'+i,'nQ'+i);
+  ids.forEach(id=>$(id).addEventListener('input',()=>{ updateLabels(); if(ctx) buildChain(); }));
+  $('micBtn').addEventListener('click',startMic);
+  $('refreshMicBtn').addEventListener('click',()=>refreshMicList({requestPermission:true, preferBuiltin:true}));
+  $('micSelect').addEventListener('change', async ()=>{ if(mediaStream){ status('入力マイクを切り替えています…'); await startMic(); } });
+  $('stopBtn').addEventListener('click',stopAll);
+  $('fileInput').addEventListener('change',e=>{ if(e.target.files[0]) loadFile(e.target.files[0]); });
+  $('bypassBtn').addEventListener('click',()=>{ bypass=!bypass; $('bypassBtn').textContent=bypass?'EQ ONに戻す':'EQ BYPASS'; if(ctx) buildChain(); });
+  $('resetBtn').addEventListener('click',()=>applyPreset(currentMode));
+  $('standardPresetBtn').addEventListener('click',()=>applyPreset('standard'));
+  $('focusPresetBtn').addEventListener('click',()=>applyPreset('focus'));
 }
 
-renderNotches();
-applyPreset();
-bind();
+if (navigator.mediaDevices?.addEventListener) navigator.mediaDevices.addEventListener('devicechange', ()=>refreshMicList());
+renderNotches(); bind(); applyPreset('focus');
 </script>
 </body>
 </html>
